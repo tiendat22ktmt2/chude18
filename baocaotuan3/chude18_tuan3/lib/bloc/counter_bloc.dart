@@ -14,8 +14,8 @@ class CounterBloc extends Bloc<CounterEvent, CounterState> {
       final newValue = repository.increment();
       emit(state.copyWith(
         value: newValue,
-        isMax: newValue >= 10, // đạt giới hạn trên
-        isMin: false,
+        isMax: newValue >= repository.max, // đọc từ repo
+        isMin: newValue <= repository.min, // đọc từ repo
       ));
     });
 
@@ -24,18 +24,30 @@ class CounterBloc extends Bloc<CounterEvent, CounterState> {
       final newValue = repository.decrement();
       emit(state.copyWith(
         value: newValue,
-        isMin: newValue <= -5, // đạt giới hạn dưới
-        isMax: false,
+        isMin: newValue <= repository.min, // đọc từ repo
+        isMax: newValue >= repository.max, // đọc từ repo
       ));
     });
 
     // Khi người dùng nhấn nút reset
     on<ResetPressed>((event, emit) {
-      repository.reset(); // ✅ đảm bảo dữ liệu trong repository cũng reset
-      emit(const CounterState(
-        value: 0,
-        isMax: false,
-        isMin: false,
+      final newValue = repository.reset(); // giờ sẽ reset về min
+      emit(CounterState(
+      value: newValue,
+      isMin: true,
+      isMax: false,
+      ));
+    });
+
+    // Khi người dùng thay đổi min/max
+    on<SetLimitPressed>((event, emit) {
+      repository.setLimits(event.min, event.max);
+
+      // Nếu counter hiện tại < min hoặc > max, đưa về giới hạn và emit lại
+      emit(CounterState(
+        value: repository.value,
+        isMin: repository.value == repository.min,
+        isMax: repository.value == repository.max,
       ));
     });
   }
