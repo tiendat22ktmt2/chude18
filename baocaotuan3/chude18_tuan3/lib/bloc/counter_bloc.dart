@@ -3,52 +3,65 @@ import '../data/counter_repository.dart';
 import 'counter_event.dart';
 import 'counter_state.dart';
 
-/// BLoC chịu trách nhiệm quản lý toàn bộ business logic
-/// của counter: tăng, giảm, reset, và kiểm tra giới hạn.
 class CounterBloc extends Bloc<CounterEvent, CounterState> {
   final CounterRepository repository;
 
-  CounterBloc(this.repository) : super(const CounterState(value: 0)) {
-    // Khi người dùng nhấn nút cộng
-    on<IncrementPressed>((event, emit) {
+  CounterBloc(this.repository)
+      : super(CounterState(
+          value: repository.value,
+          isMin: repository.value == repository.min,
+          isMax: repository.value == repository.max,
+        )) {
+
+    _initializeState();
+
+    on<IncrementPressed>((event, emit) async {
       final newValue = repository.increment();
       emit(state.copyWith(
         value: newValue,
-        isMax: newValue >= repository.max, // đọc từ repo
-        isMin: newValue <= repository.min, // đọc từ repo
+        isMax: newValue >= repository.max,
+        isMin: newValue <= repository.min,
       ));
+      await repository.saveToStorage();
     });
 
-    // Khi người dùng nhấn nút trừ
-    on<DecrementPressed>((event, emit) {
+    on<DecrementPressed>((event, emit) async {
       final newValue = repository.decrement();
       emit(state.copyWith(
         value: newValue,
-        isMin: newValue <= repository.min, // đọc từ repo
-        isMax: newValue >= repository.max, // đọc từ repo
+        isMin: newValue <= repository.min,
+        isMax: newValue >= repository.max,
       ));
+      await repository.saveToStorage();
     });
 
-    // Khi người dùng nhấn nút reset
-    on<ResetPressed>((event, emit) {
-      final newValue = repository.reset(); // giờ sẽ reset về min
+    on<ResetPressed>((event, emit) async {
+      final newValue = repository.reset();
       emit(CounterState(
-      value: newValue,
-      isMin: true,
-      isMax: false,
+        value: newValue,
+        isMin: true,
+        isMax: false,
       ));
+      await repository.saveToStorage();
     });
 
-    // Khi người dùng thay đổi min/max
-    on<SetLimitPressed>((event, emit) {
-      repository.setLimits(event.min, event.max);
-
-      // Nếu counter hiện tại < min hoặc > max, đưa về giới hạn và emit lại
+    on<SetLimitPressed>((event, emit) async {
+      await repository.setLimits(event.min, event.max);
       emit(CounterState(
         value: repository.value,
         isMin: repository.value == repository.min,
         isMax: repository.value == repository.max,
       ));
     });
+  }
+
+
+  void _initializeState() async {
+    await Future.delayed(Duration.zero); // đảm bảo sau khi widget build xong
+    emit(CounterState(
+      value: repository.value,
+      isMin: repository.value == repository.min,
+      isMax: repository.value == repository.max,
+    ));
   }
 }
