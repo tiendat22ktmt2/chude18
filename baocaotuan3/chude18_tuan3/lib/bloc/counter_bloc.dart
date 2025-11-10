@@ -57,7 +57,7 @@ class CounterBloc extends Bloc<CounterEvent, CounterState> {
 
 
   void _initializeState() async {
-    await Future.delayed(Duration.zero); // đảm bảo sau khi widget build xong
+    await Future.delayed(Duration.zero); 
     emit(CounterState(
       value: repository.value,
       isMin: repository.value == repository.min,
